@@ -31,7 +31,7 @@ die (){
 get (){
 cat << DOC  > sftp-get.sh
 #!${EXPECT_PATH}
-set timeout 30
+set timeout 600
 set host "${HOST}"
 set port ${PORT}
 set username "${USERNAME}"
@@ -43,7 +43,7 @@ set file [lindex \$argv 0]
 if { [string compare \$file ""] == 0 } {
 spawn sftp -P \$port \$username@\$host:\$default_dir/\$config_file
 expect {
-	"Are you sure you want to continue connecting (yes/no)" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
+	"yes/no" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
 	"password:" { send "\$password\r"; }
 }
 
@@ -53,7 +53,7 @@ close \$f
 }
 spawn sftp -P \$port \$username@\$host:\$default_dir/\$file
 expect {
-	"Are you sure you want to continue connecting (yes/no)" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
+	"yes/no" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
 	"password:" { send "\$password\r"; }
 }
 DOC
@@ -61,15 +61,18 @@ DOC
 		chmod +x sftp-get.sh
 		[ -n "$1" ] && ./sftp-get.sh $1 ||  ./sftp-get.sh
 		echo "$1 download done!"
-		rm ${TMP_FILE} sftp-get.sh
+		if [ "$1" != "${TMP_FILE}" ]; then
+			rm ${TMP_FILE}
+		fi
+		rm  sftp-get.sh
 }
 
 post () {
 	[ -z "$1" ] && help 
-	echo -n $1 > ${TMP_FILE}
+	echo -n ${1##*/} > ${TMP_FILE}
 cat << DOC  > sftp-post.sh
 #!${EXPECT_PATH}
-set timeout 30
+set timeout 600
 set username "${USERNAME}"
 set password "${PASSWORD}"
 set host "${HOST}"
@@ -80,7 +83,7 @@ set file [lindex \$argv 0]
 
 spawn sftp -P \$port    \$username@\$host
 expect {
-	"Are you sure you want to continue connecting (yes/no)" { send "yes\n";exp_continue }
+	"yes/no" { send "yes\n";exp_continue }
 	"password:" { send "\$password\n"; } 
 }
 sleep 2
@@ -100,7 +103,7 @@ DOC
 clear_server (){
 cat << EOF > sftp_clear.sh
 #!${EXPECT_PATH} 
-set timeout 30
+set timeout 600
 set host ${HOST}
 set port ${PORT}
 set username ${USERNAME}
@@ -108,7 +111,7 @@ set password ${PASSWORD}
 set r_path ${REMOTEPATH}
 spawn sftp -P \$port \$username@\$host
 expect {
-	"Are you sure you want to continue connecting (yes/no)" { send "yes\n";exp_continue }
+	"yes/no" { send "yes\n";exp_continue }
 	"password:" { send "\$password\n"; }
 }
 sleep 2 
@@ -136,8 +139,13 @@ help () {
 	echo "	clear - delete all file on remote specific path"
 	exit 127
 }
+version (){
+
+		echo "${PROGRAM_NAME} Version: $(jq -r .version ${CONFIG_FILE})"
+}
 prerequisite_check
 get_config
+PROGRAM_NAME=${0##*/}
 METHOD=$1
 shift 
 case "$METHOD" in 
@@ -149,6 +157,9 @@ case "$METHOD" in
 		;;
 	clear)
 		clear_server
+		;;
+	version)
+		version
 		;;
 	*) help
 		;;
