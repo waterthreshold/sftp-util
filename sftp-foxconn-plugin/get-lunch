@@ -1,0 +1,4 @@
+#!/bin/sh
+sftp-foxconn get lunch2.jpg
+
+[ -e "lunch2.jpg" ] && display lunch2.jpg

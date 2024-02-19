@@ -18,7 +18,7 @@ def main ():
     # ugly way to replace string 
     with open ("sftp-foxconn.sh", "r") as file:
         filedata= file.read()
-    filedata = filedata.replace("[REPLACE_CONFIG_IN_HERE]",dest_path)
+    filedata = filedata.replace("${HOME}/.config/sftp-foxconn/server.config",dest_path)
     with open("sftp-foxconn", "w") as file:
         file.write(filedata)
     os.chmod("sftp-foxconn",stat.S_IRWXU|stat.S_IRWXO|stat.S_IRWXG)

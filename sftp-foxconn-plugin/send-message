@@ -1,0 +1,4 @@
+#!/bin/sh
+xclip -selection clipboard -o > message.txt
+sftp-foxconn post message.txt
+rm message.txt

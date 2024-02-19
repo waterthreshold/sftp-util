@@ -1,0 +1,5 @@
+#!/bin/sh
+sftp-foxconn get message.txt
+xclip -sel c < message.txt
+#rm message.txt
+

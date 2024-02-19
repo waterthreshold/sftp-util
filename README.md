@@ -8,9 +8,13 @@
 	* sudo ./setup.py (depend on the install directory path )  or setup.py --install-dir=<PATH> # to install program in specific 
 
 ## how to use 
-	sftp-foxconn help
-	get 
-	post 
+	sftp-foxconn
+		help
+		init 
+		get 
+		post 
+		clear
 		
 ## some of fluke with expect script 
 
+P.S. Make sure don't push private sensitive config in git repository 

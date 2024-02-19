@@ -8,7 +8,7 @@ prerequisite_check (){
 }
 get_config (){
 
-CONFIG_FILE="[REPLACE_CONFIG_IN_HERE]"
+CONFIG_FILE="${HOME}/.config/sftp-foxconn/server.config"
  [ ! -e "$CONFIG_FILE" ]  && die2 "configure file ${CONFIG_FILE} not found !!"
 HOST=$(jq -r .host ${CONFIG_FILE})
 PORT=$(jq -r .port ${CONFIG_FILE})
@@ -16,6 +16,7 @@ USERNAME=$(jq -r .username ${CONFIG_FILE})
 PASSWORD=$(jq -r .password ${CONFIG_FILE})
 REMOTEPATH=$(jq -r .r_basepath ${CONFIG_FILE})
 TMP_FILE=$(jq -r .tmpfile ${CONFIG_FILE})
+PLUGIN_PATH=$(jq -r .pluginPath ${CONFIG_FILE})
 }
 die2 (){
 	msg=$1
@@ -127,6 +128,31 @@ chmod +x ./sftp_clear.sh
 echo "clear done !!"
 rm sftp_clear.sh
 }
+init (){
+cat << EOF > sftp_init.sh
+#!${EXPECT_PATH} 
+set timeout 600
+set host ${HOST}
+set port ${PORT}
+set username ${USERNAME}
+set password ${PASSWORD}
+set r_path ${REMOTEPATH}
+spawn sftp -P \$port \$username@\$host
+expect {
+	"yes/no" { send "yes\n";exp_continue }
+	"password:" { send "\$password\n"; }
+}
+sleep 2 
+expect "sftp>"
+send "mkdir \$r_path\r"
+expect "sftp>"
+send "quit\r"
+EOF
+chmod +x sftp_init.sh
+./sftp_init.sh
+echo "initial done"
+rm sftp_init.sh
+}
 
 help () {
 	echo "usage: ${0##*/} is an shell script transfer file to Foxconn sftp server connect with internl/external network tool"
@@ -137,7 +163,23 @@ help () {
 	echo "	get (filename)- fetch the config file and downaload file from sftp server"
 	echo "	post \"file_path\" - update the config file and downaload the specific file from sftp server"
 	echo "	clear - delete all file on remote specific path"
+	echo "	init - initial the sftp base path"
 	exit 127
+}
+plugin (){
+	found=0
+	echo "METHOD $1"
+	[ -z "$1" ] && help
+	for file in "$PLUGIN_PATH"/*; do
+		filename=$(basename "$file")
+#		echo $filename
+		if [ "$filename" = "$1" ]; then
+			/${PLUGIN_PATH}/$filename
+			found=1
+			break
+		fi
+	done
+	[ "$found" -eq 0 ] && help
 }
 version (){
 
@@ -158,10 +200,15 @@ case "$METHOD" in
 	clear)
 		clear_server
 		;;
+	init)
+		init
+		;;
 	version)
 		version
 		;;
-	*) help
+	*) 
+		plugin $METHOD
+		#help
 		;;
 esac
 
