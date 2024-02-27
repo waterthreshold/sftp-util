@@ -170,11 +170,13 @@ plugin (){
 	found=0
 	echo "METHOD $1"
 	[ -z "$1" ] && help
+	PLUGIN_NAME=$1
+	shift
 	for file in "$PLUGIN_PATH"/*; do
 		filename=$(basename "$file")
 #		echo $filename
-		if [ "$filename" = "$1" ]; then
-			/${PLUGIN_PATH}/$filename
+		if [ "$filename" = "${PLUGIN_NAME}" ]; then
+			/${PLUGIN_PATH}/$filename $@
 			found=1
 			break
 		fi
@@ -207,7 +209,7 @@ case "$METHOD" in
 		version
 		;;
 	*) 
-		plugin $METHOD
+		plugin $METHOD $@
 		#help
 		;;
 esac

@@ -1,0 +1,12 @@
+#!/bin/sh
+PASSWORD="jeff1111"
+echo $1
+[ -z "$1" ] && echo "must have one directory" && exit 
+[ ! -d "$1" ] &&  echo "must directory" && exit 
+
+DIRTARGET=$1
+TARGET=${DIRTARGET##*/}.zip
+echo ${TARGET}
+zip -P ${PASSWORD} -r ${TARGET} ${DIRTARGET}
+[ "$?" -eq "0" ] && sftp-foxconn post ${TARGET} || echo "compress failed "
+
