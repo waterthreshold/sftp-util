@@ -1,0 +1,13 @@
+#!/bin/sh
+NETDUMA_DEFAULT_PATH="${HOME}/xr1000v2/userspace/ap/acos"
+[ ! -e "$NETDUMA_DEFAULT_PATH" ] && echo "Not exist ${NETDUMA_DEFAULT_PATH} " && exit 
+cd ${NETDUMA_DEFAULT_PATH}
+NETDUMA_VERSION=`cat netduma/netduma_src/netduma_package/dumaos-packages-fs/dumaossystem/version`
+DATE_STRING=`date +"%Y-%m-%d"`
+LATEST_COMMIT_HASH=$(git rev-parse --short HEAD 2> /dev/null | sed "s/\(.*\)/@\1/")
+TARGET="netduma-${NETDUMA_VERSION}_${DATE_STRING}_${LATEST_COMMIT_HASH}.zip"
+
+git pull 
+
+zip -r $TARGET  netduma
+[ "$?" -eq "0" ] && sftp-foxconn post ${TARGET}
