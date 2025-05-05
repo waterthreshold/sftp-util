@@ -12,12 +12,14 @@ CONFIG_FILE="${HOME}/.config/sftp-foxconn/server.config"
  [ ! -e "$CONFIG_FILE" ]  && die2 "configure file ${CONFIG_FILE} not found !!"
 HOST=$(jq -r .host ${CONFIG_FILE})
 PORT=$(jq -r .port ${CONFIG_FILE})
+PROTOCOL=$(jq -r .protocol ${CONFIG_FILE})
 USERNAME=$(jq -r .username ${CONFIG_FILE})
 PASSWORD=$(jq -r .password ${CONFIG_FILE})
 REMOTEPATH=$(jq -r .r_basepath ${CONFIG_FILE})
 TMP_FILE=$(jq -r .tmpfile ${CONFIG_FILE})
 PLUGIN_PATH=$(jq -r .pluginPath ${CONFIG_FILE})
 }
+DEBUG=n
 die2 (){
 	msg=$1
 	echo $msg
@@ -39,24 +41,31 @@ set username "${USERNAME}"
 set password "${PASSWORD}"
 set default_dir "${REMOTEPATH}"
 set config_file "${TMP_FILE}"
+set protocol "${PROTOCOL}"
 set file [lindex \$argv 0]
 
 if { [string compare \$file ""] == 0 } {
-spawn sftp -P \$port \$username@\$host:\$default_dir/\$config_file
+spawn \$protocol -P \$port \$username@\$host:\$default_dir/\$config_file
+sleep 2
 expect {
 	"yes/no" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
-	"password:" { send "\$password\r"; }
+	"password:" { send "\$password\n"; }
+	"Password:" { send "\$password\r"; }
 }
+expect "\$protocol>"  
 
 set f [open "\$config_file"]
 set file [read \$f] 
 close \$f
 }
-spawn sftp -P \$port \$username@\$host:\$default_dir/\$file
+spawn \$protocol -P \$port \$username@\$host:\$default_dir/\$file
+sleep 2
 expect {
 	"yes/no" { send "yes\r"; expect "password:" { send "\$password\r" }; exp_continue }
-	"password:" { send "\$password\r"; }
+	"password:" { send "\$password\n"; }
+	"Password:" { send "\$password\r"; }
 }
+expect "\$protocol>" 
 DOC
 #		echo $VARS >  sftp-get2.sh
 		chmod +x sftp-get.sh
@@ -65,7 +74,7 @@ DOC
 		if [ "$1" != "${TMP_FILE}" ]; then
 			rm ${TMP_FILE}
 		fi
-		rm  sftp-get.sh
+		[ "$DEBUG" = "n" ] && rm sftp-get.sh
 }
 
 post () {
@@ -80,25 +89,30 @@ set host "${HOST}"
 set port ${PORT}
 set default_dir "${REMOTEPATH}"
 set config_file "${TMP_FILE}"
+set protocol "${PROTOCOL}"
 set file [lindex \$argv 0]
 
-spawn sftp -P \$port    \$username@\$host
+spawn \$protocol -P \$port    \$username@\$host
 expect {
 	"yes/no" { send "yes\n";exp_continue }
 	"password:" { send "\$password\n"; } 
+	"Password:" { send "\$password\r"; }
 }
 sleep 2
-expect "sftp>" 
-send "put \$config_file \$default_dir\r" 
-expect "sftp>" 
-send "put \$file \$default_dir\r" 
-expect "sftp>" 
+expect "\$protocol>" 
+send "cd \$default_dir\r" 
+expect "\$protocol>" 
+send "put \$config_file\r" 
+expect "\$protocol>" 
+send "put \$file\r" 
+expect "\$protocol>" 
 send "quit\r" 
 DOC
 	chmod +x sftp-post.sh
 	./sftp-post.sh $1
 	
-	rm  ${TMP_FILE} sftp-post.sh
+	rm  ${TMP_FILE} 
+	[ "$DEBUG" = "n" ] && rm sftp-post.sh
 	echo "$1 upload done!"
 }
 clear_server (){
@@ -110,23 +124,32 @@ set port ${PORT}
 set username ${USERNAME}
 set password ${PASSWORD}
 set r_path ${REMOTEPATH}
-spawn sftp -P \$port \$username@\$host
+set protocol ${PROTOCOL}
+spawn \$protocol -P \$port \$username@\$host
 expect {
 	"yes/no" { send "yes\n";exp_continue }
 	"password:" { send "\$password\n"; }
+	"Password:" { send "\$password\r"; }
 }
 sleep 2 
-expect "sftp>"
+expect "\$protocol>"
 send "cd \$r_path\r"
-expect "sftp>"
-send "rm *\r"
-expect "sftp>"
+expect "\$protocol>"
+
+if { [string compare \$protocol "ftp"] == 0 } {
+	send "prompt\r"
+	expect "\$protocol>"
+	send "mdel *\r"
+} else {
+	send "rm *\r"
+}
+expect "\$protocol>"
 send "quit\r"
 EOF
 chmod +x ./sftp_clear.sh
 ./sftp_clear.sh
 echo "clear done !!"
-rm sftp_clear.sh
+[ "$DEBUG" = "n" ] && rm sftp_clear.sh
 }
 init (){
 cat << EOF > sftp_init.sh
@@ -137,33 +160,35 @@ set port ${PORT}
 set username ${USERNAME}
 set password ${PASSWORD}
 set r_path ${REMOTEPATH}
-spawn sftp -P \$port \$username@\$host
+set protocol ${PROTOCOL}
+spawn \$protocol -P \$port \$username@\$host
 expect {
 	"yes/no" { send "yes\n";exp_continue }
 	"password:" { send "\$password\n"; }
+	"Password:" { send "\$password\r"; }
 }
 sleep 2 
-expect "sftp>"
+expect "\$protocol>"
 send "mkdir \$r_path\r"
-expect "sftp>"
+expect "\$protocol>"
 send "quit\r"
 EOF
 chmod +x sftp_init.sh
 ./sftp_init.sh
 echo "initial done"
-rm sftp_init.sh
+[ "$DEBUG" = "n" ] && rm sftp_init.sh
 }
 
 help () {
-	echo "usage: ${0##*/} is an shell script transfer file to Foxconn sftp server connect with internl/external network tool"
+	echo "usage: ${0##*/} is an shell script transfer file to own sftp/ftp server connect with internl/external network tool"
 	echo "symbol comment:"
 	echo "	() -  for optional parameter"
 	echo "	\"\" - must have this paramter"
 	echo "suppport command:"
-	echo "	get (filename)- fetch the config file and downaload file from sftp server"
-	echo "	post \"file_path\" - update the config file and downaload the specific file from sftp server"
+	echo "	get (filename)- fetch the config file and downaload file from sftp/ftp server"
+	echo "	post \"file_path\" - update the config file and downaload the specific file from sftp/ftp server"
 	echo "	clear - delete all file on remote specific path"
-	echo "	init - initial the sftp base path"
+	echo "	init - initial the sftp/ftp base path"
 	exit 127
 }
 plugin (){
