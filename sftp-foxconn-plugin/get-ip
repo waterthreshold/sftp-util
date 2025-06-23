@@ -1,0 +1,10 @@
+#!/bin/bash
+NC='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+sftp-foxconn get server_ip.txt
+[ ! -e "server_ip.txt" ]  && echo "Failed" && exit 1
+SERVER_IP=$(cat server_ip.txt | grep -E "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
+[ `echo -n "$SERVER_IP" | wc -c` -ne 0  ] && echo -e  "${GREEN}Successfully${NC}" || echo -e "${RED}FAILED${NC}" 
+rm server_ip.txt
+echo -e "SERVER IP: ${GREEN}$SERVER_IP${NC}"

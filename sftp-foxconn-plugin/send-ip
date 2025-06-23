@@ -1,0 +1,8 @@
+#!/bin/sh
+INTERFACE="eth0"
+MY_IP=$(ifconfig $INTERFACE | grep -Po "inet \K[0-9.0]+")
+echo ${MY_IP} > server_ip.txt
+[ -e "server_ip.txt" ] && sftp-foxconn post server_ip.txt || echo "Failed"
+rm server_ip.txt
+
+
