@@ -1,0 +1,5 @@
+#!/bin/sh
+FILENAME="attendence_`date +'%Y%m%d'`.txt"
+sftp-foxconn get $FILENAME
+[ -e "$FILENAME" ] && cat $FILENAME
+rm $FILENAME

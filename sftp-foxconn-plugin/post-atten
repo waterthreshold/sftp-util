@@ -1,0 +1,9 @@
+#!/bin/sh
+FILENAME="attendence_`date +'%Y%m%d'`.txt"
+SCRIPT="${HOME}/chicony/chicony_attendence.py"
+#echo $FILENAME
+
+sftp post ${FILENAME}
+rm ${FILENAME}
+
+#.txt 
